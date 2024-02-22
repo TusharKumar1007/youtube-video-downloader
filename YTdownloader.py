@@ -1,14 +1,22 @@
 import tkinter as tk
 from tkinter import filedialog
+from cv2 import exp
 from pytube import YouTube
 import os
 import platform
 from moviepy.editor import VideoFileClip
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
 
 def open_mp4_file(file_path):
     if platform.system() == "Windows":
         os.startfile(file_path)
+
+
+# ------------------------------------------------------------------------------------------------------
 
 
 def get_available_resolutions(video_url):
@@ -18,6 +26,9 @@ def get_available_resolutions(video_url):
     return sorted(resolutions)
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
 def download_video_with_user_choice(video_url, output_path, resolution):
     try:
         yt = YouTube(video_url)
@@ -25,12 +36,15 @@ def download_video_with_user_choice(video_url, output_path, resolution):
         title = stream.title
         print(f"\nDownloading..... {title}")
         stream.download(output_path)
-        print("Download completed successfully!")
+        print("Download completed successfully!\n")
         with open("temp_links.txt", "a+") as f:
             f.write(f"{title} --> {video_url}\n")
         return stream.title
     except Exception as e:
         print(f"Error: {e}")
+
+
+# ------------------------------------------------------------------------------------------------------
 
 
 def fetch_links_from_text_file():
@@ -41,11 +55,14 @@ def fetch_links_from_text_file():
     return links
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
 def donwload_single():
     video_url = input("Enter Video Url: ")
     output_path = os.path.join(os.path.expanduser("~"), "Downloads\\")
     resolutions = get_available_resolutions(video_url)
-    print("Available resolutions:")
+    print("\nAvailable resolutions:")
     for i, resolution in enumerate(resolutions):
         print(f"{i + 1}. {resolution}")
     choice = int(input("Enter the number corresponding to the desired resolution: "))
@@ -66,7 +83,12 @@ def donwload_single():
             print("There is an error opening the file... Try opening manually")
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
 def download_batch(yt_link_list, default_res="720p"):
+    if len(yt_link_list) == 0:
+        return "\n\t**** No Url added. Add Url first Use option 4 ****\n"
     resolution = input(
         "Enter resolution 360 or 720 type (no) to download at the highest Quality available:  "
     )
@@ -82,6 +104,9 @@ def download_batch(yt_link_list, default_res="720p"):
         download_video_with_user_choice(video_url, output_path, default_res)
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
 def save_links_to_text_file():
     print("\n\t\t*****You can type (Q) to quit adding*****")
     getLink = ""
@@ -92,9 +117,15 @@ def save_links_to_text_file():
                 f.write(getLink + "\n")
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
 def clear_file():
     with open("ytlinks.txt", "w") as f:
         f.write("")
+
+
+# ------------------------------------------------------------------------------------------------------
 
 
 def file_gui_selection():
@@ -115,10 +146,13 @@ def file_gui_selection():
     return file_path
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
 def mp4_to_mp3(file_path):
     try:
         if file_path is None:
-            print("No file selected.")
+            print("\n***** No file selected *****")
             return
         output_dir = os.path.expanduser("~\\Downloads")
         output_filename = input("Enter name for audio file: ") + ".mp3"
@@ -136,38 +170,74 @@ def mp4_to_mp3(file_path):
         print(f"Error: {e}")
 
 
+# ------------------------------------------------------------------------------------------------------
+
+
+def download_playlist():
+    chrome_options = Options()
+
+    chrome_options.add_argument("--headless")
+
+    service = Service(executable_path="chromedriver.exe")
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    user_link = input("Enter the URL: ")
+    driver.get(user_link)
+
+    video_link_list = driver.find_elements(By.ID, "video-title")
+
+    link_list = []
+    for video in video_link_list:
+        # print(video.get_attribute("href"))
+        link_list.append(video.get_attribute("href"))
+    download_batch(link_list)
+
+    driver.quit()
+
+
+# -----------------------------------------------------------------------------------------------------------------
+
+
 def main():
     while True:
-        print("\n**** You can press Q to quit any time ****")
+        print("\n**** You can press Q to quit any time ****\n")
         list_options = [
             "Download only single Video",
             "Download Multiple Videos",
+            "Download YouTube Playlist",
             "Add links to file",
             "Clear Youtube link File data",
             "Convert video(MP4) to Audio(MP3)",
         ]
         for index, choise in enumerate(list_options):
-            print(f"{index+1} {choise}")
-        main_ans = input("Enter Your choice: ")
+            print(f"{index+1} --> {choise}")
+        main_ans = input("\nEnter Your choice: ")
         if main_ans.lower() == "q":
             break
-        if main_ans not in ["1", "2", "3", "4", "5"]:
+        if main_ans not in ["1", "2", "3", "4", "5", "6"]:
             print("Invalid choice. Please try again.")
             continue
         if main_ans == "1":
-            donwload_single()
+            try:
+                donwload_single()
+            except:
+                print("\n\t\t**** Invalid Url ****")
         elif main_ans == "2":
+            os.system('cls' if os.name == 'nt' else 'clear')
             link_lst = fetch_links_from_text_file()
-            download_batch(link_lst)
+            print(download_batch(link_lst))
         elif main_ans == "3":
-            save_links_to_text_file()
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print('\n\t\t**** Make Sure The playlist Is Public ****')
+            download_playlist()
         elif main_ans == "4":
+            save_links_to_text_file()
+        elif main_ans == "5":
             try:
                 clear_file()
                 print("\n\t\t**** File clear Succesfully ****\n")
             except:
                 print("\t\t!!! Try cleaning Manually !!!")
-        elif main_ans == "5":
+        elif main_ans == "6":
             try:
                 file_path = file_gui_selection()
                 mp4_to_mp3(file_path)
