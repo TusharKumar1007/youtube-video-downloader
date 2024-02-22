@@ -9,3 +9,7 @@ You can also download multiple videos in Queue.
 There will be a ytlinks.txt file which will contain all the links of videos you want to download in queue, you can add links in this file using option 3 and clear using option 4.
 
 A temp_links.txt file will be created ones a video is download letting you know what all videos are downloaded with both its video link and title..
+
+ChromeDriver Link for selenium: https://sites.google.com/chromium.org/driver/
+
+Make sure to update your chrome to latest version.
