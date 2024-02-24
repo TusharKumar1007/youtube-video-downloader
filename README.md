@@ -7,7 +7,10 @@ This python script has two main modules:
 3-->Copy paste a youtube playlist URL(Public).
 
 You can also download multiple videos in Queue.
-There will be a ytlinks.txt file which will contain all the links of videos you want to download in queue, you can add links in this file using option 4 and clear using option 5.
+There will be a ytlinks.txt file which will contain all the links of videos you want to download in queue, you can add links in this file using option 5 and clear using option 6.
+
+***** New Functionality **** 
+Download Playlist as Audio
 
 A temp_links.txt file will be created ones a video is download letting you know what all videos are downloaded with both its video link and title..
 
