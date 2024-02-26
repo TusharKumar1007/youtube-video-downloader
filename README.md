@@ -12,7 +12,7 @@ There will be a ytlinks.txt file which will contain all the links of videos you 
 ***** New Functionality **** 
 Download Playlist as Audio
 
-A temp_links.txt file will be created ones a video is download letting you know what all videos are downloaded with both its video link and title..
+A temp_links.txt file will be created ones a video is download letting you know what all videos were downloaded with both its video link and title..
 
 ChromeDriver Link for selenium: https://sites.google.com/chromium.org/driver/
 
