@@ -119,10 +119,13 @@ def download_video_with_user_choice_single(video_url, output_path, resolution):
 
 def fetch_links_from_text_file():
     links = []
-    with open("ytlinks.txt", "r+") as f:
-        for line in f.readlines():
-            links.append(line.rstrip())
-    return links
+    try:
+        with open("ytlinks.txt", "r+") as f:
+            for line in f.readlines():
+                links.append(line.rstrip())
+        return links
+    except FileNotFoundError as e:
+        pass
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -177,7 +180,7 @@ def download_video_with_user_choice_batch(video_url, output_path, default_res):
 
 def download_batch(yt_link_list, default_res="720p"):
     if len(yt_link_list) == 0:
-        return "\n\t**** No Url added. Add Url first Use option 4 ****\n"
+        return "\n\t**** No Url added. Add Url first Use option 5 ****\n"
     resolution = input(
         "Enter resolution 360 or 720 type (no) to download at the highest Quality available:  "
     )
@@ -345,9 +348,10 @@ def main():
                 print(f"\n\t\t**** Invalid Url ****")
 
         elif main_ans == "2":
-            os.system("cls" if os.name == "nt" else "clear")
             link_lst = fetch_links_from_text_file()
             print(download_batch(link_lst))
+            sleep(2)
+            os.system("cls" if os.name == "nt" else "clear")
 
         elif main_ans == "3":
             os.system("cls" if os.name == "nt" else "clear")
