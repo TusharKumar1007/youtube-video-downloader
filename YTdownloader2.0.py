@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 from pytube import YouTube
+from pytube.exceptions import AgeRestrictedError, ExtractError, VideoUnavailable
 from time import sleep
 import os
 import platform
@@ -11,6 +12,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import re
 from moviepy.editor import VideoFileClip, AudioFileClip
+from http.client import IncompleteRead
+
+retry_count = 0
 
 
 def combine(video, audio, title):
@@ -68,15 +72,50 @@ def get_available_resolutions(video_url):
             if resolution and resolution not in resolutions:
                 resolutions.append(resolution)
         return resolutions
+    except:
+        print("\n\t\t**** Invalid Url ****")
+
+
+# ------------------------------------------------------------------------------------------------------
+
+
+def download_video_with_user_choice_single_fast(video_url, output_path, resolution):
+    global retry_count
+    try:
+        yt = YouTube(video_url)
+        stream = yt.streams.filter(progressive=True, resolution=resolution).first()
+        title = stream.title
+
+        filesize_bytes = stream.filesize
+        filesize_mb = filesize_bytes / (1024 * 1024)
+
+        print(f"\nDownloading..... {filesize_mb:.2f} MB {title}")
+        title = re.sub(r'[<>:"/\\|?*\']', "", title)
+        stream.download(output_path=output_path, filename=f"{title}z.mp4")
+        print("Download completed successfully!\n")
+        with open("temp_links.txt", "a+") as f:
+            f.write(f"{title} --> {video_url}\n")
+        return title
+    except IncompleteRead:
+        retry_count += 1
+        if retry_count <= 2:
+            print("\n\t\t**** Incomplete Donwload. Retrying download... ****")
+            return download_video_with_user_choice_single_fast(
+                video_url, output_path, resolution
+            )
+        else:
+            return print(
+                f"\n\t\tTry downloading {title} Url:{video_url} using option 1..."
+            )
     except Exception as e:
-        print("Error:", e)
-        return []
+        print(f"Error: {e}")
 
 
 # ------------------------------------------------------------------------------------------------------
 
 
 def download_video_with_user_choice_single(video_url, output_path, resolution):
+    global retry_count
     if resolution in [
         "1080p",
         "720p",
@@ -93,7 +132,12 @@ def download_video_with_user_choice_single(video_url, output_path, resolution):
         yt = YouTube(video_url)
         stream = yt.streams.filter(file_extension="mp4", resolution=resolution).first()
         if stream:
-            print(f"Downloading video in {resolution} resolution...")
+            filesize_bytes = stream.filesize
+            filesize_mb = filesize_bytes / (1024 * 1024)
+
+            print(
+                f"Downloading video in {resolution} resolution {filesize_mb:.2f} MB..."
+            )
             title = stream.title
             title = re.sub(r'[<>:"/\\|?*\']', "", title)
 
@@ -110,6 +154,17 @@ def download_video_with_user_choice_single(video_url, output_path, resolution):
             return title
         else:
             print("No stream found for the selected resolution.")
+    except IncompleteRead:
+        retry_count += 1
+        if retry_count <= 2:
+            print("\n\t\t**** Incomplete Donwload. Retrying download... ****")
+            return download_video_with_user_choice_single_fast(
+                video_url, output_path, resolution
+            )
+        else:
+            return print(
+                f"\n\t\tTry downloading {title} Url:{video_url} using option 1..."
+            )
     except Exception as e:
         print("Error:", e)
 
@@ -119,40 +174,81 @@ def download_video_with_user_choice_single(video_url, output_path, resolution):
 
 def fetch_links_from_text_file():
     links = []
-    try:
-        with open("ytlinks.txt", "r+") as f:
-            for line in f.readlines():
-                links.append(line.rstrip())
-        return links
-    except FileNotFoundError as e:
-        pass
+    with open("ytlinks.txt", "r+") as f:
+        for line in f.readlines():
+            links.append(line.rstrip())
+    return links
+
+
+# ------------------------------------------------------------------------------------------------------
+
+
+def get_available_resolutions_fast(video_url):
+    yt = YouTube(video_url)
+    streams = yt.streams.filter(progressive=True)
+    resolutions = set(stream.resolution for stream in streams)
+    return sorted(resolutions)
 
 
 # ------------------------------------------------------------------------------------------------------
 
 
 def donwload_single():
-    video_url = input("Enter Video Url: ")
+    video_url = input("Enter Video Url: ").strip()
     output_path = os.path.join(os.path.expanduser("~"), "Downloads\\")
-    resolutions = get_available_resolutions(video_url)
+    choice_lst = [
+        "Fast download(Limited Resolutions)",
+        "Slow Download(More fps and Resolutons)",
+    ]
+
+    for i, x in enumerate(choice_lst):
+        print(f"\t\t{i+1} --> {x}")
+
+    fast_moreres_choice = input("Enter your choice: ").strip()
+
+    if fast_moreres_choice == "1":
+        resolutions = get_available_resolutions_fast(video_url)
+    else:
+        resolutions = get_available_resolutions(video_url)
+
+    if not resolutions:
+        return print(
+            "\n\t\t**** This video might be recently uploaded.Try after 24 Hours ****"
+        )
     print("\nAvailable resolutions:")
     for i, resolution in enumerate(resolutions):
         print(f"{i + 1}. {resolution}")
-    choice = int(input("Enter the number corresponding to the desired resolution: "))
-    selected_resolution = resolutions[choice - 1]
-    yt_title = download_video_with_user_choice_single(
-        video_url, output_path, selected_resolution
-    )
+
+    try:
+        choice = int(
+            input("Enter the number corresponding to the desired resolution: ").strip()
+        )
+        if choice <= 0:
+            raise IndexError
+        selected_resolution = resolutions[choice - 1]
+    except IndexError:
+        return print("\n\t\t**** Invalid choice ****")
+
+    if fast_moreres_choice == "1":
+        yt_title = download_video_with_user_choice_single_fast(
+            video_url, output_path, selected_resolution
+        )
+    else:
+        yt_title = download_video_with_user_choice_single(
+            video_url, output_path, selected_resolution
+        )
 
     video_file_path = os.path.join(output_path, f"{yt_title}z.mp4")
 
     open_video = input(
         "Do you want to Play video now press 1 to play or any other key to leave: "
-    )
+    ).strip()
 
     if open_video == "1":
         try:
             open_mp4_file(video_file_path)
+        except Exception as e:
+            print(e)
         except:
             print("There is an error opening the file... Try opening manually")
 
@@ -162,15 +258,32 @@ def donwload_single():
 
 def download_video_with_user_choice_batch(video_url, output_path, default_res):
     try:
+        retry_count = 0
         yt = YouTube(video_url)
         stream = yt.streams.filter(progressive=True, resolution=default_res).first()
         title = stream.title
-        print(f"\nDownloading..... {title}")
+
+        filesize_bytes = stream.filesize
+        filesize_mb = filesize_bytes / (1024 * 1024)
+
+        print(f"\nDownloading..... {title} ({filesize_mb:.2f} MB)")
+
         stream.download(output_path)
         print("Download completed successfully!\n")
         with open("temp_links.txt", "a+") as f:
             f.write(f"{title} --> {video_url}\n")
         return stream.title
+    except IncompleteRead:
+        retry_count += 1
+        if retry_count <= 2:
+            print("\n\t\t**** Incomplete Donwload. Retrying download... ****")
+            return download_video_with_user_choice_single_fast(
+                video_url, output_path, default_res
+            )
+        else:
+            return print(
+                f"\n\t\tTry downloading {title} Url:{video_url} using option 1..."
+            )
     except Exception as e:
         print(f"Error: {e}")
 
@@ -182,10 +295,12 @@ def download_batch(yt_link_list, default_res="720p"):
     if len(yt_link_list) == 0:
         return "\n\t**** No Url added. Add Url first Use option 5 ****\n"
     resolution = input(
-        "Enter resolution 360 or 720 type (no) to download at the highest Quality available:  "
-    )
-    if resolution not in ["no", "No", "NO"]:
+        "Enter resolution 360 or 720 press enter to download at the highest Quality available:  "
+    ).strip()
+
+    if resolution in ["360","720"]:
         default_res = resolution + "p"
+
     print(
         f"\n\t\t**** Number of Videos at {default_res} to be Downloaded: {len(yt_link_list)} ****"
     )
@@ -203,7 +318,7 @@ def save_links_to_text_file():
     print("\n\t\t*****You can type (Q) to quit adding*****")
     getLink = ""
     while getLink not in ["Q", "q"]:
-        getLink = input("Enter the Youtube video link: ")
+        getLink = input("Enter the Youtube video link: ").strip()
         if getLink not in ["q", "Q"]:
             with open("ytlinks.txt", "a+") as f:
                 f.write(getLink + "\n")
@@ -247,7 +362,7 @@ def mp4_to_mp3(file_path):
             print("\n***** No file selected *****")
             return
         output_dir = os.path.expanduser("~\\Downloads")
-        output_filename = input("Enter name for audio file: ") + ".mp3"
+        output_filename = input("Enter name for audio file: ").strip() + ".mp3"
         output_path = os.path.join(output_dir, output_filename)
         if os.path.exists(output_path):
             print("File already exists. Please choose a different name.")
@@ -275,13 +390,13 @@ def download_playlist():
     for i, x in enumerate(option_list):
         print(f"\t\t{i+1} --> {x} ")
 
-    user_input = input("Enter your choice: ")
+    user_input = input("Enter your choice: ").strip()
     if user_input not in ["1", "2"]:
         return print("\t\t**** Invalid choice ****\n")
 
     service = Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    user_link = input("Enter the URL: ")
+    user_link = input("Enter the URL: ").strip()
     driver.get(user_link)
 
     video_link_list = driver.find_elements(By.ID, "video-title")
@@ -334,7 +449,7 @@ def main():
 
         for index, choise in enumerate(list_options):
             print(f"{index+1} --> {choise}")
-        main_ans = input("\nEnter Your choice: ")
+        main_ans = input("\nEnter Your choice: ").strip()
         if main_ans.lower() == "q":
             break
         if main_ans not in ["1", "2", "3", "4", "5", "6", "7"]:
@@ -344,27 +459,58 @@ def main():
         if main_ans == "1":
             try:
                 donwload_single()
-            except:
+            except AgeRestrictedError as e:
+                print(
+                    "\n\t\t**** This video is age-restricted and cannot be downloaded ****"
+                )
+            except ExtractError as e:
+                print(
+                    "\n\t\t**** There was an error extracting video data. Please check your network connection ****"
+                )
+            except VideoUnavailable as e:
+                print(
+                    "\n\t\t**** This video is not available. It may have been removed or made private ****"
+                )
+            except Exception as e:
                 print(f"\n\t\t**** Invalid Url ****")
 
         elif main_ans == "2":
-            link_lst = fetch_links_from_text_file()
-            print(download_batch(link_lst))
-            sleep(2)
-            os.system("cls" if os.name == "nt" else "clear")
+            try:
+                link_lst = fetch_links_from_text_file()
+                print(download_batch(link_lst))
+
+            except:
+                print("\n\t\t**** Please add links using option 5 ****")
+                sleep(2)
 
         elif main_ans == "3":
             os.system("cls" if os.name == "nt" else "clear")
             print("\n\t\t**** Make Sure The playlist Is Public ****")
             try:
                 download_playlist()
+            except ExtractError as e:
+                print(
+                    "\n\t\t**** There was an error extracting video data. Please check your network connection ****"
+                )
+            except VideoUnavailable as e:
+                print(
+                    "\n\t\t**** This video is not available. It may have been removed or made private ****"
+                )
             except:
                 print("\n**** Check your Internet connection and try again ****\n")
 
         elif main_ans == "4":
-            video_url = input("Enter the YouTube video URL: ")
+            video_url = input("Enter the YouTube video URL: ").strip()
             try:
                 download_audio(video_url)
+            except ExtractError as e:
+                print(
+                    "\n\t\t**** There was an error extracting video data. Please check your network connection ****"
+                )
+            except VideoUnavailable as e:
+                print(
+                    "\n\t\t**** This video is not available. It may have been removed or made private ****"
+                )
             except Exception as e:
                 print(e)
         elif main_ans == "5":
@@ -382,7 +528,7 @@ def main():
                 file_path = file_gui_selection()
                 mp4_to_mp3(file_path)
             except:
-                print("\t\t****Cannot find the file specified****\t\t")
+                print("\t\t**** Cannot find the file specified ****\t\t")
 
 
 # -----------------------------------------------------------------------------------------------------------------
