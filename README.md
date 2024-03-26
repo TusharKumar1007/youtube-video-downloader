@@ -1,19 +1,21 @@
 Make sure you download all the modules used in the script..
 
-This python script has two main modules:
-
-1-->Downloading YouTube videos via link
-2-->Converting .mp4 to .mp3
-3-->Copy paste a youtube playlist URL(Public).
-
 You can also download multiple videos in Queue.
 There will be a ytlinks.txt file which will contain all the links of videos you want to download in queue, you can add links in this file using option 5 and clear using option 6.
 
 ***** New Functionality **** 
-Download Playlist as Audio
+Download Playlist as Audio.
+Audio with Higher bitrate can be downloaded.
+upto 4k videos can be downloaded.
+optimised overall performance.
+
 
 A temp_links.txt file will be created ones a video is download letting you know what all videos were downloaded with both its video link and title..
 
 ChromeDriver Link for selenium: https://sites.google.com/chromium.org/driver/
 
 Make sure to update your chrome to the latest version.
+
+
+Before running the script run this in terminal:
+pip install -r requirements.txt
