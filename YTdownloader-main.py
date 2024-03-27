@@ -7,7 +7,8 @@ import os
 import platform
 from moviepy.editor import VideoFileClip
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import re
@@ -422,9 +423,9 @@ def download_playlist():
     user_input = input("Enter your choice: ").strip()
     if user_input not in ["1", "2"]:
         return print("\t\t**** Invalid choice ****\n")
-
-    service = Service(executable_path="chromedriver.exe")
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver = webdriver.Chrome(
+        service=ChromeService(ChromeDriverManager().install()), options=chrome_options
+    )
     user_link = input("Enter the URL: ").strip()
     driver.get(user_link)
 
