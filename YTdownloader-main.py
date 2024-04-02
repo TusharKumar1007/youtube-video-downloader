@@ -74,7 +74,7 @@ def delete_files_with_name(downloads_folder, file_prefix):
 def get_available_resolutions(video_url):
     try:
         yt = YouTube(video_url)
-        streams = yt.streams.filter(adaptive=True).filter(mime_type="video/webm")
+        streams = yt.streams.filter(adaptive=True).filter(mime_type="video/webm").all()
         resolutions = []
         for stream in streams:
             resolution = stream.resolution
@@ -146,52 +146,52 @@ def download_video_with_user_choice_single(video_url, resolution):
         "2160p",
         "4320p",
     ]:
-        download_audio(video_url)
 
-    try:
-        yt = YouTube(video_url)
-        stream = yt.streams.filter(
-            adaptive=True, mime_type="video/webm", resolution=resolution
-        )
-        if stream:
-            video = stream.first()
-            filesize_bytes = video.filesize
-            filesize_mb = filesize_bytes / (1024 * 1024)
-            output_path = determine_output_path()
-            print(
-                f"Downloading video in {resolution} resolution {filesize_mb:.2f} MB..."
+        try:
+            yt = YouTube(video_url)
+            stream = yt.streams.filter(
+                adaptive=True, mime_type="video/webm", resolution=resolution
             )
-            title = video.title
-            title = re.sub(r'[<>:"/\\|?*\']', "", title)
+            if stream:
+                video = stream.first()
+                filesize_bytes = video.filesize
+                filesize_mb = filesize_bytes / (1024 * 1024)
+                output_path = determine_output_path()
+                print(
+                    f"Downloading video in {resolution} resolution {filesize_mb:.2f} MB..."
+                )
+                title = yt.title
+                title = re.sub(r'[<>:"/\\|?*\']', "", title)
 
-            video.download(output_path=output_path, filename=f"{title}.mp4")
+                video.download(output_path=output_path, filename=f"{title}.mp4")
 
-            path = f"{output_path}/{title}.mp4"
+                path = f"{output_path}/{title}.mp4"
+                download_audio(video_url)
 
-            combine(path, f"{output_path}/{title}.mp3")
+                combine(path, f"{output_path}/{title}.mp3")
 
-            delete_files_with_name(output_path, title)
+                delete_files_with_name(output_path, title)
 
-            print("Video downloaded successfully!")
-            with open("temp_links.txt", "a+") as f:
-                f.write(f"{title} --> {video_url}\n")
+                print("Video downloaded successfully!")
+                with open("temp_links.txt", "a+") as f:
+                    f.write(f"{title} --> {video_url}\n")
+                return title
+            else:
+                print("No video found for the selected resolution.")
+        except IncompleteRead:
+            retry_count += 1
+            if retry_count <= 3:
+                print("\n\t\t**** Incomplete Donwload. Retrying download... ****")
+                return download_video_with_user_choice_single_fast(
+                    video_url, output_path, resolution="720p"
+                )
+            else:
+                return print(
+                    f"\n\t\tTry downloading {title} Url:{video_url} using option 1..."
+                )
+        except Exception as e:
+            # print("Error:", e)
             return title
-        else:
-            print("No video found for the selected resolution.")
-    except IncompleteRead:
-        retry_count += 1
-        if retry_count <= 2:
-            print("\n\t\t**** Incomplete Donwload. Retrying download... ****")
-            return download_video_with_user_choice_single_fast(
-                video_url, output_path, resolution
-            )
-        else:
-            return print(
-                f"\n\t\tTry downloading {title} Url:{video_url} using option 1..."
-            )
-    except Exception as e:
-        # print("Error:", e)
-        return title
 
 
 # ------------------------------------------------------------------------------------------------------
