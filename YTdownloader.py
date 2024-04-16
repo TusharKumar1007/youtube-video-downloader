@@ -2,10 +2,10 @@ import tkinter as tk
 from tkinter import filedialog
 from pytubefix import YouTube
 from pytubefix.exceptions import AgeRestrictedError, ExtractError, VideoUnavailable
+from pytubefix.cli import on_progress
 from time import sleep
 import os
 import platform
-from moviepy.editor import VideoFileClip
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
@@ -14,8 +14,8 @@ from selenium.webdriver.chrome.options import Options
 import re
 from http.client import IncompleteRead
 import ffmpeg
-
 from colorama import init, Fore
+import inspect
 
 init()
 
@@ -76,8 +76,8 @@ def delete_files_with_name(downloads_folder, file_prefix):
 
 def get_available_resolutions(video_url):
     try:
-        yt = YouTube(video_url)
-        streams = yt.streams.filter(adaptive=True).filter(mime_type="video/webm").all()
+        yt = YouTube(video_url, on_progress_callback=on_progress)
+        streams = yt.streams.filter(adaptive=True).filter(mime_type="video/webm")
         resolutions = []
         for stream in streams:
             resolution = stream.resolution
@@ -94,7 +94,7 @@ def get_available_resolutions(video_url):
 def download_video_with_user_choice_single_fast(video_url, resolution):
     global retry_count
     try:
-        yt = YouTube(video_url)
+        yt = YouTube(video_url, on_progress_callback=on_progress)
         stream = yt.streams.filter(progressive=True, resolution=resolution).first()
         title = stream.title
 
@@ -153,7 +153,7 @@ def download_video_with_user_choice_single(video_url, resolution):
     ]:
 
         try:
-            yt = YouTube(video_url)
+            yt = YouTube(video_url, on_progress_callback=on_progress)
             stream = yt.streams.filter(
                 adaptive=True, mime_type="video/webm", resolution=resolution
             )
@@ -162,10 +162,10 @@ def download_video_with_user_choice_single(video_url, resolution):
                 filesize_bytes = video.filesize
                 filesize_mb = filesize_bytes / (1024 * 1024)
                 output_path = determine_output_path()
-                print(
-                    f"{Fore.MAGENTA}Downloading video in {resolution} resolution {filesize_mb:.2f} MB..."
-                )
                 title = yt.title
+                print(
+                    f"{Fore.MAGENTA}Downloading {title} in {resolution} resolution {filesize_mb:.2f} MB..."
+                )
                 title = re.sub(r'[<>:"/\\|?*\']', "", title)
 
                 video.download(output_path=output_path, filename=f"{title}.mp4")
@@ -177,12 +177,13 @@ def download_video_with_user_choice_single(video_url, resolution):
 
                 delete_files_with_name(output_path, title)
 
-                print(f"{Fore.CYAN}Video downloaded successfully!")
+                print(f"{Fore.CYAN}Video downloaded successfully!\n")
                 with open("temp_links.txt", "a+") as f:
                     f.write(f"{title} --> {video_url}\n")
-                return title
+                return title, 0
             else:
                 print(f"{Fore.RED}No video found for the selected resolution.")
+                return "No title", 404
         except IncompleteRead:
             retry_count += 1
             if retry_count <= 3:
@@ -196,9 +197,12 @@ def download_video_with_user_choice_single(video_url, resolution):
                 return print(
                     f"\n\t\t{Fore.RED}Try downloading {title} Url:{video_url} using option 1..."
                 )
+        except (UnicodeEncodeError, UnicodeDecodeError) as e:
+            # print("Error: ", e)
+            return title, 0
         except Exception as e:
-            # print("Error:", e)
-            return title
+            print("Error:", e)
+            return title, 404
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -216,7 +220,7 @@ def fetch_links_from_text_file():
 
 
 def get_available_resolutions_fast(video_url):
-    yt = YouTube(video_url)
+    yt = YouTube(video_url, on_progress_callback=on_progress)
     streams = yt.streams.filter(progressive=True)
     resolutions = set(stream.resolution for stream in streams)
     return sorted(resolutions)
@@ -274,7 +278,7 @@ def donwload_single():
             video_url, selected_resolution
         )
     else:
-        yt_title = download_video_with_user_choice_single(
+        yt_title, return_code = download_video_with_user_choice_single(
             video_url, selected_resolution
         )
 
@@ -301,7 +305,7 @@ def donwload_single():
 def download_video_with_user_choice_batch(video_url, output_path, default_res):
     try:
         retry_count = 0
-        yt = YouTube(video_url)
+        yt = YouTube(video_url, on_progress_callback=on_progress)
         stream = yt.streams.filter(progressive=True, resolution=default_res).first()
         title = stream.title
 
@@ -340,10 +344,10 @@ def download_batch(yt_link_list, default_res="720p"):
     if len(yt_link_list) == 0:
         raise Exception
     resolution = input(
-        "Enter resolution 360 or 720 press enter to download at the highest Quality available:  "
+        "Enter resolution 360, 480, 720 or 1080 press enter to download at the highest Quality available:  "
     ).strip()
 
-    if resolution in ["360", "720"]:
+    if resolution in ["360", "480", "720", "1080"]:
         default_res = resolution + "p"
 
     print(
@@ -353,7 +357,18 @@ def download_batch(yt_link_list, default_res="720p"):
         video_url = f"{link}"
         print(f"{Fore.CYAN}Downloading {index+1}/{len(yt_link_list)}")
         output_path = os.path.join(os.path.expanduser("~"), "Downloads\\")
-        download_video_with_user_choice_batch(video_url, output_path, default_res)
+
+        if default_res in ["480p", "1080p"]:
+            title, psudo_error_code = download_video_with_user_choice_single(
+                link, default_res
+            )
+            # print(psudo_error_code)
+            if psudo_error_code == 404:
+                print(f"\n{Fore.YELLOW}Trying to download in 360p\n")
+                download_video_with_user_choice_batch(video_url, output_path, "360p")
+
+        else:
+            download_video_with_user_choice_batch(video_url, output_path, default_res)
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -531,7 +546,7 @@ def download_playlist():
 
 
 def download_audio(url):
-    yt = YouTube(url)
+    yt = YouTube(url, on_progress_callback=on_progress)
 
     audio_stream = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
     yt_title = audio_stream.title
@@ -543,9 +558,13 @@ def download_audio(url):
         output_path = os.path.join(os.path.expanduser("~"), "Downloads")
     yt_title = re.sub(r'[<>:"/\\|?*\']', "", yt_title)
 
-    print(f"\n{Fore.MAGENTA}Downloading {yt_title} as Audio...\n ")
+    caller = inspect.stack()[1].function
+
+    if caller not in ["download_video_with_user_choice_single"]:
+        print(f"\n{Fore.MAGENTA}Downloading {yt_title} as Audio...\n ")
     audio_stream.download(output_path=output_path, filename=f"{yt_title}.mp3")
-    print(f"{Fore.CYAN}**** Audio Download Complete ****\n")
+    if caller not in ["download_video_with_user_choice_single"]:
+        print(f"{Fore.CYAN}**** Audio Download Complete ****\n")
 
 
 # -----------------------------------------------------------------------------------------------------------------
