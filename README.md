@@ -14,10 +14,5 @@ optimised overall performance.
 
 A temp_links.txt file will be created ones a video is download letting you know what all videos were downloaded with both its video link and title..
 
-ChromeDriver Link for selenium: https://sites.google.com/chromium.org/driver/
-
-Make sure to update your chrome to the latest version.
-
-
 Before running the script run this in terminal:
 pip install -r requirements.txt
