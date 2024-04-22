@@ -570,9 +570,38 @@ def download_audio(url):
 # -----------------------------------------------------------------------------------------------------------------
 
 
+def download_hls_video(hls_url):
+    try:
+        # Get user-defined file name
+        file_name = input("Enter file name: ")
+        if not file_name:
+            print("Invalid file name. Please provide a valid file name.")
+            return
+        file_name = re.sub(r"[^\w\s-]", "_", file_name)
+        # Construct full file path in the downloads folder
+        output_file = os.path.join(
+            os.path.expanduser("~"), "Downloads", f"{file_name}.mp4"
+        )
+        print(f"{Fore.YELLOW}\nDownloading {file_name}...")
+
+        (
+            ffmpeg.input(hls_url)
+            .output(output_file, c="copy")
+            .run(overwrite_output=True, quiet=True)
+        )
+        print(f"{Fore.CYAN}Downloaded successfully!")
+    except ffmpeg.Error as e:
+        print(f"{Fore.RED}Invalid Url...")
+    except KeyboardInterrupt:
+        return print(f"{Fore.YELLOW}\n\t\t**** Aborting Donlwoad ****")
+
+
+# -----------------------------------------------------------------------------------------------------------------
+
+
 def main():
     while True:
-        print("\n**** You can press Q to quit any time ****\n")
+        print(f"{Fore.LIGHTYELLOW_EX}\n**** You can press Q to quit any time ****\n")
 
         list_options = [
             "Download only single Video",
@@ -589,7 +618,7 @@ def main():
         main_ans = input("\nEnter Your choice: ").strip()
         if main_ans.lower() == "q":
             break
-        if main_ans not in ["1", "2", "3", "4", "5", "6", "7"]:
+        if main_ans not in ["1", "2", "3", "4", "5", "6", "7", "#"]:
             print(f"{Fore.RED}Invalid choice. Please try again.")
             continue
 
@@ -673,6 +702,9 @@ def main():
                 mp4_to_mp3(file_path, file_name)
             except:
                 print(f"\t\t{Fore.RED}**** Cannot find the file specified ****\t\t")
+        elif main_ans == "#":
+            user_input_m3u8 = input("Enter .m3u8 Url: ")
+            download_hls_video(user_input_m3u8)
 
 
 # -----------------------------------------------------------------------------------------------------------------
