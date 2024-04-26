@@ -16,3 +16,5 @@ A temp_links.txt file will be created ones a video is download letting you know 
 
 Before running the script run this in terminal:
 pip install -r requirements.txt
+
+Complete App Exe file --> https://drive.google.com/file/d/1S4ibatgoNid41gviBVZY2k2NepVG_rf5/view
