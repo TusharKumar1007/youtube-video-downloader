@@ -23,9 +23,13 @@ init()
 retry_count = 0
 
 bundle_dir = getattr(sys, "_MEIPASS", os.path.abspath(os.path.dirname(__file__)))
-ffmpeg_path = os.path.abspath(
-    os.path.join(bundle_dir, r"C:\ffmpeg_for_python\ffmpeg.exe")
-)
+
+ffmpeg_relative_path = os.path.join("ffmpeg.exe")
+
+ffmpeg_path = os.path.abspath(os.path.join(bundle_dir, ffmpeg_relative_path))
+# ffmpeg_path = os.path.abspath(
+#     os.path.join(bundle_dir, r"C:\ffmpeg_for_python\ffmpeg.exe")
+# )
 
 
 def combine(video, audio):
@@ -291,7 +295,7 @@ def donwload_single():
     video_file_path = os.path.join(output_path, f"{yt_title}z.mp4")
 
     open_video = input(
-        "Do you want to Play video now press 1 to play or any other key to leave: "
+        f"Do you want to Play video now press {Fore.CYAN}1 {Fore.GREEN}to play or any other key to leave: "
     ).strip()
 
     if open_video == "1":
@@ -445,12 +449,14 @@ def mp4_to_mp3(file_path, file_name="audio.mp3"):
 
     user_choice = ""
     while user_choice not in ["1", "2"]:
-        user_choice = input("Enter your choice (1 or 2), or 'q' to quit: ").strip()
+        user_choice = input(
+            f"Enter your choice {Fore.CYAN}(1 or 2), {Fore.GREEN}or {Fore.CYAN}'q' {Fore.GREEN}to quit: "
+        ).strip()
         if user_choice.lower() == "q":
             return
 
     output_filename = (
-        input("Enter name for audio file (or press Enter for auto-detect): ").strip()
+        input(f"Enter name for audio file (or press {Fore.CYAN}Enter {Fore.GREEN}for auto-detect): ").strip()
         or file_name
     ) + ".mp3"
 
@@ -459,7 +465,7 @@ def mp4_to_mp3(file_path, file_name="audio.mp3"):
         output_path = os.path.join(output_dir, output_filename)
 
         ffmpeg_cmd = [
-            "ffmpeg",
+            f"{ffmpeg_path}",
             "-i",
             file_path,
             "-vn",
@@ -571,7 +577,7 @@ def download_hls_video(hls_url):
         print(f"{Fore.YELLOW}\nDownloading {file_name}...")
 
         ffmpeg_cmd = [
-            "ffmpeg",
+            f"{ffmpeg_path}",
             "-i",
             hls_url,
             "-c",
